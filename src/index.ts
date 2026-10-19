@@ -1,11 +1,22 @@
-import { offsetHoursAgo } from "./prozorro/client";
+import { fetchTender, offsetHoursAgo, tenderUrl } from "./prozorro/client";
 import { fetchActiveSince } from "./prozorro/sync";
 
-console.time("sync");
 const result = await fetchActiveSince(offsetHoursAgo(2));
-console.timeEnd("sync");
-
-console.log("pages:", result.pages);
 console.log("active tenders:", result.items.length);
-console.log("first:", result.items.slice(0, 3));
-console.log("next offset:", result.nextOffset);
+
+// details for the first three only: one request per tender
+for (const item of result.items.slice(0, 3)) {
+  const tender = await fetchTender(item.id);
+  const value = tender.value;
+
+  console.log("---");
+  console.log(tender.tenderID, "|", tender.title.trim());
+  console.log("customer:", tender.procuringEntity.name.trim());
+  console.log("budget:", value ? `${value.amount} ${value.currency}` : "no budget");
+  console.log("link:", tenderUrl(tender.tenderID));
+
+  for (const position of tender.items ?? []) {
+    const unit = position.unit?.name ?? "";
+    console.log(`  - ${position.description}: ${position.quantity ?? "?"} ${unit}`);
+  }
+}
