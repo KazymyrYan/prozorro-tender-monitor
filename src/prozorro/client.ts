@@ -22,11 +22,12 @@ export async function fetchFeedPage(
   const params = new URLSearchParams({
     limit: String(limit),
     offset,
-    opt_fields: "status", //the list returns only id and dateModified by default, so status has to be requested explicitly
+    opt_fields: "status", // the list only has id and dateModified unless we ask for more
   });
 
   const response = await fetch(`${BASE_URL}?${params}`);
 
+  // fetch doesn't throw on 4xx/5xx, so check it by hand
   if (!response.ok) {
     throw new Error(
       `Prozorro API error: ${response.status} ${response.statusText}`,
@@ -36,6 +37,7 @@ export async function fetchFeedPage(
   return (await response.json()) as FeedPage;
 }
 
+/** Unix time in seconds for "N hours ago", works as a feed offset. */
 export function offsetHoursAgo(hours: number): string {
   const seconds = Math.floor(Date.now() / 1000) - hours * 3600;
   return String(seconds);

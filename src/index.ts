@@ -1,5 +1,11 @@
-import { fetchFeedPage, offsetHoursAgo } from "./prozorro/client";
+import { offsetHoursAgo } from "./prozorro/client";
+import { fetchActiveSince } from "./prozorro/sync";
 
-const page = await fetchFeedPage(offsetHoursAgo(24), 3);
-console.log(page.data);
-console.log("next offset:", page.next_page.offset);
+console.time("sync");
+const result = await fetchActiveSince(offsetHoursAgo(2));
+console.timeEnd("sync");
+
+console.log("pages:", result.pages);
+console.log("active tenders:", result.items.length);
+console.log("first:", result.items.slice(0, 3));
+console.log("next offset:", result.nextOffset);
