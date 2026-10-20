@@ -19,5 +19,11 @@
     "tsx": "^4.23.15",
     "typescript": "~6.0.0",
     "typescript-eslint": "^8.71.2"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.8",
+    "pg": "^8.23.1",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.8"
   }
 }
