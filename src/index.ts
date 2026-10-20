@@ -1,4 +1,5 @@
-import { KEYWORDS } from "./config";
+import { CPV_CODES, KEYWORDS } from "./config";
+import { findCpvMatches } from "./filter/cpv";
 import { findMatches } from "./filter/matcher";
 import {
   fetchTender,
@@ -38,17 +39,23 @@ if (failures.length > 0) {
   console.error(`failed: ${failures.length}, first: ${failures[0]}`);
 }
 
+// a tender is interesting if a keyword OR a CPV code matched
 const matched = tenders
-  .map((tender) => ({ tender, found: findMatches(tender, KEYWORDS) }))
-  .filter(({ found }) => found.length > 0);
+  .map((tender) => ({
+    tender,
+    words: findMatches(tender, KEYWORDS),
+    cpv: findCpvMatches(tender, CPV_CODES),
+  }))
+  .filter(({ words, cpv }) => words.length > 0 || cpv.length > 0);
 
 console.log(`loaded: ${tenders.length}, matched: ${matched.length}`);
 
-for (const { tender, found } of matched) {
+for (const { tender, words, cpv } of matched) {
   const value = tender.value;
   console.log("---");
   console.log(`${tender.tenderID} | ${tender.title.trim()}`);
-  console.log("found:", found.join(", "));
+  console.log("words:", words.join(", ") || "-");
+  console.log("cpv:", cpv.join(", ") || "-");
   console.log(
     "budget:",
     value ? `${value.amount} ${value.currency}` : "no budget",
