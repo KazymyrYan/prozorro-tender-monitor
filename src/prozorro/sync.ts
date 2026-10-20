@@ -1,14 +1,11 @@
 import { fetchFeedPage, type FeedItem } from "./client";
+import { sleep } from "../utils/sleep";
 
 const PAGE_SIZE = 1000;
 const PAUSE_MS = 200; // be gentle with the API between pages
 
 // only these statuses still accept proposals
 const ACTIVE_STATUSES = new Set(["active.enquiries", "active.tendering"]);
-
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
-
 export interface SyncResult {
   items: FeedItem[];
   nextOffset: string;
