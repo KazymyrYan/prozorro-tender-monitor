@@ -24,9 +24,14 @@ export interface Tender {
   status: string;
   title: string;
   procurementMethodType: string;
-  procuringEntity: { name: string };
-  value?: { amount: number; currency: string };
-  tenderPeriod?: { endDate: string };
+  procuringEntity: {
+    name: string;
+    identifier?: { id?: string };
+    address?: { region?: string };
+  };
+  dateModified: string;
+  value?: { amount?: number; currency?: string };
+  tenderPeriod?: { endDate?: string };
   items?: TenderItem[];
 }
 

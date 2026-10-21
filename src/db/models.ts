@@ -11,10 +11,14 @@ import {
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set, check your .env");
 
+// cloud databases (Neon) only accept encrypted connections
+const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+
 // underscored: camelCase fields become snake_case columns
 export const sequelize = new Sequelize(url, {
   logging: false,
   define: { underscored: true },
+  dialectOptions: isLocal ? {} : { ssl: { require: true } },
 });
 
 // key-value storage, for now only the feed offset
@@ -34,6 +38,28 @@ SyncState.init(
   { sequelize, tableName: "sync_state", timestamps: false },
 );
 
+// every tender whose details we already loaded, matched or not; old rows are purged
+export class SeenRow extends Model<
+  InferAttributes<SeenRow>,
+  InferCreationAttributes<SeenRow>
+> {
+  declare id: string;
+  declare seenAt: CreationOptional<Date>;
+}
+
+SeenRow.init(
+  {
+    id: { type: DataTypes.STRING, primaryKey: true },
+    seenAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  { sequelize, tableName: "seen_tenders", timestamps: false },
+);
+
+// full data, only for tenders that matched our keywords or CPV codes
 export class TenderRow extends Model<
   InferAttributes<TenderRow>,
   InferCreationAttributes<TenderRow>
@@ -42,14 +68,17 @@ export class TenderRow extends Model<
   declare tenderNumber: string;
   declare title: string;
   declare procuringEntity: string;
+  declare procuringEntityEdrpou: string | null;
+  declare procuringEntityRegion: string | null;
+  declare procurementMethodType: string;
   // NUMERIC comes back from pg as a string, so money never goes through float
   declare budgetAmount: string | null;
   declare currency: string | null;
   declare tenderPeriodEnd: Date | null;
   declare status: string;
+  declare dateModified: Date;
   declare matchedWords: string[];
   declare matchedCpv: string[];
-  declare isMatched: boolean;
   declare notifiedAt: CreationOptional<Date | null>;
   declare firstSeenAt: CreationOptional<Date>;
 }
@@ -60,13 +89,16 @@ TenderRow.init(
     tenderNumber: { type: DataTypes.STRING, allowNull: false, unique: true },
     title: { type: DataTypes.TEXT, allowNull: false },
     procuringEntity: { type: DataTypes.TEXT, allowNull: false },
+    procuringEntityEdrpou: { type: DataTypes.STRING, allowNull: true },
+    procuringEntityRegion: { type: DataTypes.STRING, allowNull: true },
+    procurementMethodType: { type: DataTypes.STRING, allowNull: false },
     budgetAmount: { type: DataTypes.DECIMAL(18, 2), allowNull: true },
     currency: { type: DataTypes.STRING, allowNull: true },
     tenderPeriodEnd: { type: DataTypes.DATE, allowNull: true },
     status: { type: DataTypes.STRING, allowNull: false },
+    dateModified: { type: DataTypes.DATE, allowNull: false },
     matchedWords: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: false },
     matchedCpv: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: false },
-    isMatched: { type: DataTypes.BOOLEAN, allowNull: false },
     // stays empty until the report is sent
     notifiedAt: { type: DataTypes.DATE, allowNull: true },
     firstSeenAt: {
