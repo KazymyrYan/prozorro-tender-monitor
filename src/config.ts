@@ -1,12 +1,28 @@
-// stems, not full words: "шин" catches "шини", "шин", "шинами"
-export const KEYWORDS = ["шин", "комп'ютер", "прибиран"];
+import "dotenv/config";
+import { existsSync, readFileSync } from "node:fs";
 
-// CPV (ДК 021:2015) divisions we care about; a tender matches if any item falls under one of them
-export const CPV_CODES = [
-  "14000000-1", // mining products
-  "19000000-6", // leather, textile, plastic and rubber materials
-  "35000000-4", // security, fire-fighting, police equipment
-  "39000000-2", // furniture
-  "43000000-3", // mining machinery
-  "44000000-0", // construction materials
-];
+export interface KeywordBlock {
+  name: string;
+  keywords: string[];
+}
+
+export interface SearchConfig {
+  // true: a tender needs a keyword AND a CPV code, false: either one is enough
+  requireCpv: boolean;
+  cpv: string[];
+  exclude: string[];
+  blocks: KeywordBlock[];
+}
+
+function readRaw(): string {
+  // CI gets the config from a secret, locally it is an ignored file
+  const fromEnv = process.env.KEYWORDS_JSON;
+  if (fromEnv) return fromEnv;
+  if (existsSync("keywords.local.json")) {
+    return readFileSync("keywords.local.json", "utf8");
+  }
+  console.warn("keywords.local.json not found, using keywords.example.json");
+  return readFileSync("keywords.example.json", "utf8");
+}
+
+export const config = JSON.parse(readRaw()) as SearchConfig;
