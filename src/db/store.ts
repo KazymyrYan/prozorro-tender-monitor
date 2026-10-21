@@ -27,6 +27,7 @@ export interface TenderEntry {
   tender: Tender;
   words: string[];
   cpv: string[];
+  matched: boolean;
 }
 
 /**
@@ -35,9 +36,8 @@ export interface TenderEntry {
  */
 export async function saveTenders(entries: TenderEntry[]): Promise<number> {
   if (entries.length === 0) return 0;
-  const matched = entries.filter(
-    ({ words, cpv }) => words.length > 0 || cpv.length > 0,
-  );
+
+  const matched = entries.filter((entry) => entry.matched);
 
   // seen marks, tenders and items go in together or not at all
   await sequelize.transaction(async (transaction) => {

@@ -1,4 +1,4 @@
-import { CPV_CODES, KEYWORDS } from "./config";
+import { config } from "./config";
 import { initDb, sequelize } from "./db/models";
 import {
   findSeenIds,
@@ -9,7 +9,7 @@ import {
   type TenderEntry,
 } from "./db/store";
 import { findCpvMatches } from "./filter/cpv";
-import { findMatches } from "./filter/matcher";
+import { createMatcher } from "./filter/matcher";
 import {
   fetchTender,
   offsetHoursAgo,
@@ -20,6 +20,7 @@ import { fetchActiveSince } from "./prozorro/sync";
 import { mapInBatches } from "./utils/batch";
 
 const CHUNK_SIZE = 200;
+const findWords = createMatcher(config.blocks, config.exclude);
 
 console.time("run");
 await initDb();
@@ -34,7 +35,7 @@ const fresh = feed.items.filter((item) => !seen.has(item.id));
 console.log(`active: ${feed.items.length}, new: ${fresh.length}`);
 
 const failures: string[] = [];
-const matched: TenderEntry[] = [];
+const hits: TenderEntry[] = [];
 let stored = 0;
 
 // load and save chunk by chunk: a crash or Ctrl+C loses at most one chunk
@@ -56,18 +57,20 @@ for (let i = 0; i < fresh.length; i += CHUNK_SIZE) {
     300,
   );
 
-  const entries = loaded
+  const entries: TenderEntry[] = loaded
     .filter((t): t is Tender => t !== null)
-    .map((tender) => ({
-      tender,
-      words: findMatches(tender, KEYWORDS),
-      cpv: findCpvMatches(tender, CPV_CODES),
-    }));
+    .map((tender) => {
+      const words = findWords(tender);
+      const cpv = findCpvMatches(tender, config.cpv);
+      // keyword AND cpv works like a manual search, otherwise either is enough
+      const matched = config.requireCpv
+        ? words.length > 0 && cpv.length > 0
+        : words.length > 0 || cpv.length > 0;
+      return { tender, words, cpv, matched };
+    });
 
   stored += await saveTenders(entries);
-  matched.push(
-    ...entries.filter(({ words, cpv }) => words.length > 0 || cpv.length > 0),
-  );
+  hits.push(...entries.filter((entry) => entry.matched));
   console.log(
     `progress: ${Math.min(i + CHUNK_SIZE, fresh.length)}/${fresh.length}`,
   );
@@ -85,10 +88,10 @@ if (failures.length === 0) {
   );
 }
 
-console.log(`matched: ${matched.length}`);
+console.log(`matched: ${hits.length}`);
 
 // just a peek, the real report will go to Telegram
-for (const { tender, words, cpv } of matched.slice(0, 5)) {
+for (const { tender, words, cpv } of hits.slice(0, 5)) {
   console.log("---");
   console.log(`${tender.tenderID} | ${tender.title.trim()}`);
   console.log("words:", words.join(", ") || "-");

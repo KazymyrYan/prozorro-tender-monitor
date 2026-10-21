@@ -1,0 +1,8 @@
+{
+  "requireCpv": false,
+  "cpv": ["34350000-5"],
+  "exclude": [],
+  "blocks": [
+    { "name": "Example", "keywords": ["шин*", "автошин*"] }
+  ]
+}
