@@ -75,6 +75,7 @@ export class TenderRow extends Model<
   declare budgetAmount: string | null;
   declare currency: string | null;
   declare tenderPeriodEnd: Date | null;
+  declare publishedAt: Date | null;
   declare status: string;
   declare dateModified: Date;
   declare matchedWords: string[];
@@ -95,6 +96,7 @@ TenderRow.init(
     budgetAmount: { type: DataTypes.DECIMAL(18, 2), allowNull: true },
     currency: { type: DataTypes.STRING, allowNull: true },
     tenderPeriodEnd: { type: DataTypes.DATE, allowNull: true },
+    publishedAt: { type: DataTypes.DATE, allowNull: true },
     status: { type: DataTypes.STRING, allowNull: false },
     dateModified: { type: DataTypes.DATE, allowNull: false },
     matchedWords: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: false },

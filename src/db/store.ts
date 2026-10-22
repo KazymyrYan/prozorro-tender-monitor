@@ -1,4 +1,4 @@
-import type { Tender } from "../prozorro/client";
+import { publicationDate, type Tender } from "../prozorro/client";
 import { ItemRow, SeenRow, sequelize, SyncState, TenderRow } from "./models";
 
 const OFFSET_KEY = "feed_offset";
@@ -65,6 +65,7 @@ export async function saveTenders(entries: TenderEntry[]): Promise<number> {
         tenderPeriodEnd: tender.tenderPeriod?.endDate
           ? new Date(tender.tenderPeriod.endDate)
           : null,
+        publishedAt: publicationDate(tender),
         status: tender.status,
         dateModified: new Date(tender.dateModified),
         matchedWords: words,

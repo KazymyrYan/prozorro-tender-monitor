@@ -31,7 +31,9 @@ export interface Tender {
   };
   dateModified: string;
   value?: { amount?: number; currency?: string };
-  tenderPeriod?: { endDate?: string };
+  tenderPeriod?: { startDate?: string; endDate?: string };
+  enquiryPeriod?: { startDate?: string };
+  noticePublicationDate?: string;
   items?: TenderItem[];
 }
 
@@ -86,7 +88,8 @@ export async function fetchTender(id: string): Promise<Tender> {
     if (response.status === 429 && attempt < MAX_ATTEMPTS) {
       const retryAfter = Number(response.headers.get("Retry-After"));
       // use the server's hint if there is one, otherwise 1s, 2s, 4s...
-      const waitMs = retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** (attempt - 1);
+      const waitMs =
+        retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** (attempt - 1);
       await sleep(waitMs);
       continue;
     }
@@ -100,4 +103,13 @@ export async function fetchTender(id: string): Promise<Tender> {
 /** Public page of a tender; `tenderID` is the human-readable number like UA-2026-10-07-000171-a. */
 export function tenderUrl(tenderID: string): string {
   return `https://prozorro.gov.ua/uk/tender/${tenderID}`;
+}
+
+/** When the tender was published: the notice date, else the start of its first period. */
+export function publicationDate(tender: Tender): Date | null {
+  const raw =
+    tender.noticePublicationDate ??
+    tender.enquiryPeriod?.startDate ??
+    tender.tenderPeriod?.startDate;
+  return raw ? new Date(raw) : null;
 }
