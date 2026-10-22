@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx src/index.ts",
+    "collect": "tsx src/collect.ts",
+    "report": "tsx src/report.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },
