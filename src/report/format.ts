@@ -5,6 +5,7 @@ export interface ReportItem {
   description: string;
   quantity: string | null;
   unit: string | null;
+  cpvCode: string;
 }
 
 export interface ReportTender {
@@ -14,6 +15,7 @@ export interface ReportTender {
   procuringEntity: string;
   budgetAmount: string | null;
   currency: string | null;
+  publishedAt: Date | null;
   tenderPeriodEnd: Date | null;
   procurementMethodType: string;
   matchedWords: string[];
@@ -27,6 +29,7 @@ export interface ReportMessage {
 
 const LIMIT = 3800; // Telegram allows 4096, keep a margin
 const MAX_ITEMS = 3;
+const MAX_CPV = 3;
 
 const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -43,8 +46,8 @@ function formatMoney(amount: string | null, currency: string | null): string {
   return `${number} ${currency ?? ""}`.trim();
 }
 
-function formatDeadline(date: Date | null): string {
-  if (!date) return "не вказано";
+function formatDate(date: Date | null, empty: string): string {
+  if (!date) return empty;
   return date.toLocaleString("uk-UA", {
     timeZone: "Europe/Kyiv",
     day: "2-digit",
@@ -62,17 +65,27 @@ function formatItem(item: ReportItem): string {
   return `• ${escapeHtml(cut(item.description.trim(), 90))}${quantity}${unit}`;
 }
 
+function formatCpv(items: ReportItem[]): string[] {
+  const codes = [...new Set(items.map((item) => item.cpvCode))];
+  if (codes.length === 0) return [];
+  const more = codes.length > MAX_CPV ? "…" : "";
+  return [`CPV: ${codes.slice(0, MAX_CPV).join(", ")}${more}`];
+}
+
 function formatTender(tender: ReportTender): string {
-  const words = tender.matchedWords.map((word) => word.replace(/\*/g, ""));
   const extra = tender.items.length - MAX_ITEMS;
 
   const lines = [
     `<b>${escapeHtml(cut(tender.title.trim(), 200))}</b>`,
     `Замовник: ${escapeHtml(cut(tender.procuringEntity, 120))}`,
     `Бюджет: ${formatMoney(tender.budgetAmount, tender.currency)}`,
-    `Подача до: ${formatDeadline(tender.tenderPeriodEnd)}`,
+    `Опубліковано: ${formatDate(tender.publishedAt, "невідомо")}`,
+    `Подача до: ${formatDate(tender.tenderPeriodEnd, "не вказано")}`,
     `Вид: ${escapeHtml(tender.procurementMethodType)}`,
-    ...(words.length > 0 ? [`Слова: ${escapeHtml(words.join(", "))}`] : []),
+    ...formatCpv(tender.items),
+    ...(tender.matchedWords.length > 0
+      ? [`Слова: ${escapeHtml(tender.matchedWords.join(", "))}`]
+      : []),
     ...tender.items.slice(0, MAX_ITEMS).map(formatItem),
     ...(extra > 0 ? [`… ще позицій: ${extra}`] : []),
     `<a href="${tenderUrl(tender.tenderNumber)}">${escapeHtml(tender.tenderNumber)}</a>`,

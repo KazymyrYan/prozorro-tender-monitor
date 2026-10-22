@@ -26,7 +26,10 @@ if (!dryRun) {
 const rows = await TenderRow.findAll({
   where: {
     notifiedAt: null,
-    [Op.or]: [{ tenderPeriodEnd: null }, { tenderPeriodEnd: { [Op.gte]: now } }],
+    [Op.or]: [
+      { tenderPeriodEnd: null },
+      { tenderPeriodEnd: { [Op.gte]: now } },
+    ],
   },
   order: [["firstSeenAt", "ASC"]],
 });
@@ -43,6 +46,7 @@ for (const item of items) {
     description: item.description,
     quantity: item.quantity,
     unit: item.unit,
+    cpvCode: item.cpvCode,
   });
   itemsByTender.set(item.tenderId, list);
 }
@@ -55,6 +59,7 @@ const tenders: ReportTender[] = rows.map((row) => ({
   budgetAmount: row.budgetAmount,
   currency: row.currency,
   tenderPeriodEnd: row.tenderPeriodEnd,
+  publishedAt: row.publishedAt,
   procurementMethodType: row.procurementMethodType,
   matchedWords: row.matchedWords,
   items: itemsByTender.get(row.id) ?? [],
