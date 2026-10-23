@@ -1,0 +1,35 @@
+name: report
+
+on:
+  schedule:
+    # every 30 minutes from 05:00 to 07:30 UTC on weekdays,
+    # the script itself waits for 08:30 Kyiv time (UTC+3 in summer, UTC+2 in winter)
+    - cron: "*/30 5-7 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      KEYWORDS_JSON: ${{ secrets.KEYWORDS_JSON }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      # on schedule: once a day after 08:30, by hand: send right now
+      - run: npm run report -- --scheduled
+        if: github.event_name == 'schedule'
+      - run: npm run report
+        if: github.event_name == 'workflow_dispatch'
+        

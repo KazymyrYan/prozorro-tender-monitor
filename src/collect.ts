@@ -98,7 +98,7 @@ if (failures.length === 0) {
 console.log(`matched: ${hits.length}`);
 
 // just a peek, the real report will go to Telegram
-for (const { tender, words, cpv } of hits.slice(0, 5)) {
+for (const { tender, words, cpv } of process.env.CI ? [] : hits.slice(0, 5)) {
   console.log("---");
   console.log(`${tender.tenderID} | ${tender.title.trim()}`);
   console.log("words:", words.join(", ") || "-");
