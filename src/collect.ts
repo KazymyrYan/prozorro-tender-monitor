@@ -34,6 +34,13 @@ const seen = await findSeenIds(feed.items.map((item) => item.id));
 const fresh = feed.items.filter((item) => !seen.has(item.id));
 console.log(`active: ${feed.items.length}, new: ${fresh.length}`);
 
+const byType = new Map<string, number>();
+for (const item of fresh) {
+  const type = item.procurementMethodType;
+  byType.set(type, (byType.get(type) ?? 0) + 1);
+}
+console.log("new by type:", Object.fromEntries(byType));
+
 const failures: string[] = [];
 const hits: TenderEntry[] = [];
 let stored = 0;
