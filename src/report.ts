@@ -8,12 +8,33 @@ import {
 } from "./report/format";
 import { sendMessage } from "./telegram/send";
 import { sleep } from "./utils/sleep";
+import { getState, setState } from "./db/store";
 
 // --dry prints the messages and changes nothing
 const dryRun = process.argv.includes("--dry");
 const now = new Date();
 
+// --scheduled is for the cron: one report a day, not before 08:30 Kyiv time
+const scheduled = process.argv.includes("--scheduled");
+const REPORT_DATE_KEY = "last_report_date";
+const kyivDate = now.toLocaleDateString("en-CA", { timeZone: "Europe/Kyiv" });
+const kyivTime = now.toLocaleTimeString("en-GB", {
+  timeZone: "Europe/Kyiv",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 await initDb();
+
+if (
+  scheduled &&
+  (kyivTime < "08:30" || (await getState(REPORT_DATE_KEY)) === kyivDate)
+) {
+  console.log(`skip: ${kyivDate} ${kyivTime}, too early or already sent today`);
+  await sequelize.close();
+  process.exit(0);
+}
 
 if (!dryRun) {
   // bidding is over, such tenders are of no use in the digest
@@ -89,5 +110,7 @@ if (messages.length === 0) {
     `${dryRun ? "dry run: " : "sent: "}${messages.length} message(s), ${tenders.length} tender(s)`,
   );
 }
+
+if (scheduled && !dryRun) await setState(REPORT_DATE_KEY, kyivDate);
 
 await sequelize.close();

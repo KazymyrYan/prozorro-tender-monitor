@@ -129,3 +129,12 @@ export async function purgeOldSeen(days = 14): Promise<number> {
   );
   return (meta as { rowCount?: number }).rowCount ?? 0;
 }
+
+export async function getState(key: string): Promise<string | null> {
+  const row = await SyncState.findByPk(key);
+  return row?.value ?? null;
+}
+
+export async function setState(key: string, value: string): Promise<void> {
+  await SyncState.upsert({ key, value });
+}
