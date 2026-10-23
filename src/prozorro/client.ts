@@ -4,6 +4,7 @@ export interface FeedItem {
   id: string;
   dateModified: string;
   status: string;
+  procurementMethodType: string;
 }
 
 export interface FeedPage {
@@ -18,6 +19,13 @@ export interface TenderItem {
   classification: { id: string };
 }
 
+export interface TenderAward {
+  status: string;
+  date?: string;
+  value?: { amount?: number; currency?: string };
+  suppliers?: { name?: string; identifier?: { id?: string } }[];
+}
+
 export interface Tender {
   id: string;
   tenderID: string;
@@ -29,12 +37,13 @@ export interface Tender {
     identifier?: { id?: string };
     address?: { region?: string };
   };
-  dateModified: string;
   value?: { amount?: number; currency?: string };
   tenderPeriod?: { startDate?: string; endDate?: string };
   enquiryPeriod?: { startDate?: string };
   noticePublicationDate?: string;
+  dateModified: string;
   items?: TenderItem[];
+  awards?: TenderAward[];
 }
 
 const BASE_URL = "https://public-api.prozorro.gov.ua/api/2.5/tenders";
@@ -50,7 +59,8 @@ export async function fetchFeedPage(
   const params = new URLSearchParams({
     limit: String(limit),
     offset,
-    opt_fields: "status", // the list only has id and dateModified unless we ask for more
+    // the list only has id and dateModified unless we ask for more
+    opt_fields: "status,procurementMethodType",
   });
 
   const response = await fetch(`${BASE_URL}?${params}`);

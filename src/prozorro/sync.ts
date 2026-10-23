@@ -1,11 +1,23 @@
-import { fetchFeedPage, type FeedItem } from "./client";
 import { sleep } from "../utils/sleep";
+import { fetchFeedPage, type FeedItem } from "./client";
 
 const PAGE_SIZE = 1000;
 const PAUSE_MS = 200; // be gentle with the API between pages
 
-// only these statuses still accept proposals
-const ACTIVE_STATUSES = new Set(["active.enquiries", "active.tendering"]);
+// competitive procedures still accept proposals in these statuses
+const OPEN_STATUSES = new Set(["active.enquiries", "active.tendering"]);
+
+// procedures without a tender live for minutes, the supplier is already chosen,
+// so we take them as soon as they are active or complete
+const NO_TENDER_TYPES = new Set([
+  "reporting",
+  "negotiation",
+  "negotiation.quick",
+]);
+const NO_TENDER_STATUSES = new Set(["active", "complete"]);
+
+export const isNoTender = (type: string) => NO_TENDER_TYPES.has(type);
+
 export interface SyncResult {
   items: FeedItem[];
   nextOffset: string;
@@ -14,7 +26,7 @@ export interface SyncResult {
 
 /**
  * Walks the feed from `startOffset` until it runs dry and returns
- * the tenders that are still open for proposals.
+ * the tenders worth loading: open competitive ones and no-tender contracts.
  */
 export async function fetchActiveSince(
   startOffset: string,
@@ -41,7 +53,9 @@ export async function fetchActiveSince(
   }
 
   const items = [...latest.values()].filter((item) =>
-    ACTIVE_STATUSES.has(item.status),
+    isNoTender(item.procurementMethodType)
+      ? NO_TENDER_STATUSES.has(item.status)
+      : OPEN_STATUSES.has(item.status),
   );
   return { items, nextOffset: offset, pages };
 }

@@ -1,5 +1,12 @@
 import { publicationDate, type Tender } from "../prozorro/client";
-import { ItemRow, SeenRow, sequelize, SyncState, TenderRow } from "./models";
+import {
+  AwardRow,
+  ItemRow,
+  SeenRow,
+  sequelize,
+  SyncState,
+  TenderRow,
+} from "./models";
 
 const OFFSET_KEY = "feed_offset";
 
@@ -71,6 +78,26 @@ export async function saveTenders(entries: TenderEntry[]): Promise<number> {
         matchedWords: words,
         matchedCpv: cpv,
       })),
+      { transaction },
+    );
+
+    await AwardRow.bulkCreate(
+      matched.flatMap(({ tender }) =>
+        (tender.awards ?? []).flatMap((award) =>
+          (award.suppliers ?? []).map((supplier) => ({
+            tenderId: tender.id,
+            supplierName: supplier.name?.trim() ?? "",
+            supplierEdrpou: supplier.identifier?.id ?? null,
+            amount:
+              typeof award.value?.amount === "number"
+                ? String(award.value.amount)
+                : null,
+            currency: award.value?.currency ?? null,
+            status: award.status,
+            awardedAt: award.date ? new Date(award.date) : null,
+          })),
+        ),
+      ),
       { transaction },
     );
 

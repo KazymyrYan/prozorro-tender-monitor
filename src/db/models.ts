@@ -140,6 +140,38 @@ ItemRow.init(
 TenderRow.hasMany(ItemRow, { foreignKey: "tenderId", onDelete: "CASCADE" });
 ItemRow.belongsTo(TenderRow, { foreignKey: "tenderId" });
 
+// who won the tender, mostly useful for no-tender contracts
+export class AwardRow extends Model<
+  InferAttributes<AwardRow>,
+  InferCreationAttributes<AwardRow>
+> {
+  declare id: CreationOptional<number>;
+  declare tenderId: string;
+  declare supplierName: string;
+  declare supplierEdrpou: string | null;
+  declare amount: string | null;
+  declare currency: string | null;
+  declare status: string;
+  declare awardedAt: Date | null;
+}
+
+AwardRow.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    tenderId: { type: DataTypes.STRING, allowNull: false },
+    supplierName: { type: DataTypes.TEXT, allowNull: false },
+    supplierEdrpou: { type: DataTypes.STRING, allowNull: true },
+    amount: { type: DataTypes.DECIMAL(18, 2), allowNull: true },
+    currency: { type: DataTypes.STRING, allowNull: true },
+    status: { type: DataTypes.STRING, allowNull: false },
+    awardedAt: { type: DataTypes.DATE, allowNull: true },
+  },
+  { sequelize, tableName: "tender_awards", timestamps: false },
+);
+
+TenderRow.hasMany(AwardRow, { foreignKey: "tenderId", onDelete: "CASCADE" });
+AwardRow.belongsTo(TenderRow, { foreignKey: "tenderId" });
+
 /** Creates the tables if they don't exist yet. */
 export async function initDb(): Promise<void> {
   await sequelize.sync();
