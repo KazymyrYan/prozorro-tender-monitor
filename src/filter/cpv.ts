@@ -10,7 +10,10 @@ function cpvPrefix(code: string): string {
  * Returns the codes from `codes` that at least one tender item falls under.
  * Codes are hierarchical, so "39000000-2" also covers "39220000-0".
  */
-export function findCpvMatches(tender: Tender, codes: string[]): string[] {
+export function findCpvMatches(
+  tender: Pick<Tender, "items">,
+  codes: string[],
+): string[] {
   const itemCodes = (tender.items ?? []).map((item) => item.classification.id);
 
   return codes.filter((code) => {
