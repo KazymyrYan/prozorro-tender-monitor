@@ -11,8 +11,8 @@ A tool that watches the public [Prozorro](https://prozorro.gov.ua) feed, picks t
 - [x] Competitive tenders and no-tender procedures (reporting, negotiation) with their winners
 - [x] Incremental collection: every run continues from the saved feed offset, nothing is lost or processed twice
 - [x] Daily digest in Telegram, grouped by keyword block, no duplicates
-- [x] Scheduled runs on GitHub Actions: hourly collection, weekday morning report
-- [ ] Health check: an alert when collection has not succeeded for a while
+- [x] Scheduled runs on GitHub Actions: collection every hour (GitHub often delays it to every 3-5 hours), weekday morning report
+- [x] Health check: a Telegram alert when collection has not succeeded for 8 hours
 - [ ] Separate digest section for no-tender contracts
 - [ ] Web interface: favorites, customer history, change alerts, Excel and Google Sheets export
 
@@ -64,13 +64,14 @@ Tables are created automatically on the first run.
 npm run collect              # fetch and store new tenders
 npm run report -- --dry      # preview the digest, changes nothing
 npm run report               # send the digest now
+npm run health               # check that collection is alive, alerts in Telegram if not
 npm run typecheck            # type checking
 npm run lint                 # linting
 ```
 
 ## Deployment
 
-Both jobs run on GitHub Actions: `collect.yml` every hour and `report.yml` on weekday mornings (the script itself sends once a day, not before 08:30 Kyiv time). The database URL, Telegram credentials and the search config are repository secrets. Matches are not printed in CI logs.
+Three jobs run on GitHub Actions: `collect.yml` every hour, `report.yml` on weekday mornings (the script itself sends once a day, not before 08:30 Kyiv time) and `health.yml` every 3 hours. The database URL, Telegram credentials and the search config are repository secrets. Matches are not printed in CI logs.
 
 ## Development workflow
 
