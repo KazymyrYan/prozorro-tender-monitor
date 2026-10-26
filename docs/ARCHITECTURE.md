@@ -81,7 +81,7 @@ Tables are created by `sequelize.sync()`; there are no migrations yet, new colum
   This keeps the database small enough for a free cloud tier.
 - **Matcher.** A keyword is a phrase of words; `stem*` allows a case ending of up to 4 letters, a plain word must
   match exactly. Words of a phrase may come in any order with up to 2 other words between them. Hyphens split words,
-  Latin lookalike letters are normalized to Cyrillic, and any excluded phrase cancels the match.
+  Latin lookalike letters are normalized to Cyrillic. The title and every item are checked separately: a phrase never mixes words of two positions, and an excluded phrase cancels only the position it is found in.
 - **Keyword AND CPV.** `requireCpv: true` mirrors a manual search (a keyword and a CPV division must both match);
   `false` makes either one enough.
 - **Publication date.** The notice date, else the start of the first period, else the creation date: no-tender
@@ -115,6 +115,7 @@ npm run collect            # fetch and store new tenders
 npm run report -- --dry    # preview the digest without sending
 npm run report             # send the digest now
 npm run health             # check that collection is alive, alert in Telegram if not
+npm run recheck            # re-run the current search config over stored tenders, shows what would change
 npm run typecheck && npm run lint
 ```
 

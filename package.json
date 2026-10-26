@@ -8,6 +8,7 @@
     "collect": "tsx src/collect.ts",
     "report": "tsx src/report.ts",
     "health": "tsx src/health.ts",
+    "recheck": "tsx src/recheck.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },

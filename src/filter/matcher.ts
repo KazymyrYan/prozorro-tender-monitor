@@ -1,6 +1,9 @@
 import type { KeywordBlock } from "../config";
 import type { Tender } from "../prozorro/client";
 
+// the matcher only needs the texts, so tests and tools can pass a lighter object
+export type Searchable = Pick<Tender, "title" | "items">;
+
 // Latin letters that look like Cyrillic ones sneak into tender texts
 const LOOKALIKES: Record<string, string> = {
   a: "а",
@@ -92,26 +95,35 @@ const compile = (phrases: string[]): Phrase[] =>
     .filter((phrase) => phrase.words.length > 0);
 
 /**
- * Builds a function that returns the keywords found in a tender
- * (title and item descriptions). Any excluded phrase cancels all matches.
+ * Builds a function that returns the keywords found in a tender.
+ * The title and every item are checked on their own: a phrase never glues words
+ * from two different positions, and an excluded phrase cancels only its own position.
  */
 export function createMatcher(
   blocks: KeywordBlock[],
   exclude: string[],
-): (tender: Tender) => string[] {
+): (tender: Searchable) => string[] {
   const include = compile(blocks.flatMap((block) => block.keywords));
   const stop = compile(exclude);
 
   return (tender) => {
-    const parts = [
+    const units = [
       tender.title,
       ...(tender.items ?? []).map((item) => item.description),
     ];
-    const tokens = normalize(parts.join("\n")).match(TEXT_WORD) ?? [];
+    const found = new Set<string>();
 
-    if (stop.some((phrase) => phraseFound(phrase.words, tokens))) return [];
+    for (const unit of units) {
+      const tokens = normalize(unit).match(TEXT_WORD) ?? [];
+      if (stop.some((phrase) => phraseFound(phrase.words, tokens))) continue;
+      for (const phrase of include) {
+        if (phraseFound(phrase.words, tokens)) found.add(phrase.source);
+      }
+    }
+
+    // keep the order of the config
     return include
-      .filter((phrase) => phraseFound(phrase.words, tokens))
+      .filter((phrase) => found.has(phrase.source))
       .map((phrase) => phrase.source);
   };
 }
