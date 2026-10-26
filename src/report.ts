@@ -1,8 +1,15 @@
 import { Op } from "sequelize";
 import { config } from "./config";
-import { initDb, ItemRow, sequelize, TenderRow } from "./db/models";
+import {
+  AwardRow,
+  initDb,
+  ItemRow,
+  sequelize,
+  TenderRow,
+} from "./db/models";
 import {
   buildMessages,
+  type ReportAward,
   type ReportItem,
   type ReportTender,
 } from "./report/format";
@@ -55,10 +62,19 @@ const rows = await TenderRow.findAll({
   order: [["firstSeenAt", "ASC"]],
 });
 
+const ids = rows.map((row) => row.id);
+
 const items =
-  rows.length === 0
+  ids.length === 0 ? [] : await ItemRow.findAll({ where: { tenderId: ids } });
+
+// only no-tender procedures have winners at this point, the rest simply get an empty list
+const awards =
+  ids.length === 0
     ? []
-    : await ItemRow.findAll({ where: { tenderId: rows.map((row) => row.id) } });
+    : await AwardRow.findAll({
+        where: { tenderId: ids },
+        order: [["id", "ASC"]],
+      });
 
 const itemsByTender = new Map<string, ReportItem[]>();
 for (const item of items) {
@@ -70,6 +86,19 @@ for (const item of items) {
     cpvCode: item.cpvCode,
   });
   itemsByTender.set(item.tenderId, list);
+}
+
+const awardsByTender = new Map<string, ReportAward[]>();
+for (const award of awards) {
+  const list = awardsByTender.get(award.tenderId) ?? [];
+  list.push({
+    supplierName: award.supplierName,
+    supplierEdrpou: award.supplierEdrpou,
+    amount: award.amount,
+    currency: award.currency,
+    status: award.status,
+  });
+  awardsByTender.set(award.tenderId, list);
 }
 
 const tenders: ReportTender[] = rows.map((row) => ({
@@ -84,6 +113,7 @@ const tenders: ReportTender[] = rows.map((row) => ({
   procurementMethodType: row.procurementMethodType,
   matchedWords: row.matchedWords,
   items: itemsByTender.get(row.id) ?? [],
+  awards: awardsByTender.get(row.id) ?? [],
 }));
 
 const messages = buildMessages(tenders, config.blocks);
