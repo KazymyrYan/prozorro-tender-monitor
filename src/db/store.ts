@@ -138,3 +138,6 @@ export async function getState(key: string): Promise<string | null> {
 export async function setState(key: string, value: string): Promise<void> {
   await SyncState.upsert({ key, value });
 }
+
+// when the last fully successful collect finished, read by the health check
+export const COLLECT_OK_KEY = "last_collect_ok";

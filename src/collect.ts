@@ -1,11 +1,13 @@
 import { config } from "./config";
 import { initDb, sequelize } from "./db/models";
 import {
+  COLLECT_OK_KEY,
   findSeenIds,
   getOffset,
   purgeOldSeen,
   saveOffset,
   saveTenders,
+  setState,
   type TenderEntry,
 } from "./db/store";
 import { findCpvMatches } from "./filter/cpv";
@@ -89,6 +91,8 @@ console.log(`stored in full: ${stored}, old seen marks purged: ${purged}`);
 // move the offset only if everything loaded, otherwise the failed ones would be lost
 if (failures.length === 0) {
   await saveOffset(feed.nextOffset);
+  // the health check watches this timestamp
+  await setState(COLLECT_OK_KEY, new Date().toISOString());
 } else {
   console.error(
     `failed: ${failures.length}, offset not moved, first: ${failures[0]}`,
