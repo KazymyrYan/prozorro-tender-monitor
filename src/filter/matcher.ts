@@ -35,7 +35,10 @@ const TEXT_WORD = new RegExp(WORD, "gu");
 const PATTERN_WORD = new RegExp(`${WORD}\\*?`, "gu");
 
 const MAX_ENDING = 4; // longest case ending allowed after a stem
-const MAX_GAP = 2; // words that may sit between the words of a phrase
+const MAX_GAP = 2; // words that may sit between the words of a keyword phrase
+// stop phrases are checked inside one position only, so they can look wider:
+// "труба поліпропіленова композитна армована скловолокном" must still be caught
+const MAX_STOP_GAP = 6;
 
 interface WordPattern {
   stem: string;
@@ -60,7 +63,11 @@ function wordMatches(pattern: WordPattern, token: string): boolean {
 }
 
 /** Looks for the words of a phrase in any order, close to each other. */
-function phraseFound(words: WordPattern[], tokens: string[]): boolean {
+function phraseFound(
+  words: WordPattern[],
+  tokens: string[],
+  gap = MAX_GAP,
+): boolean {
   const positions: number[][] = [];
   for (const word of words) {
     const hits: number[] = [];
@@ -71,7 +78,7 @@ function phraseFound(words: WordPattern[], tokens: string[]): boolean {
     positions.push(hits);
   }
   // the widest distance allowed between the first and the last used word
-  const span = words.length - 1 + MAX_GAP;
+  const span = words.length - 1 + gap;
 
   const pick = (k: number, used: number[]): boolean => {
     if (k === positions.length) {
@@ -115,7 +122,11 @@ export function createMatcher(
 
     for (const unit of units) {
       const tokens = normalize(unit).match(TEXT_WORD) ?? [];
-      if (stop.some((phrase) => phraseFound(phrase.words, tokens))) continue;
+      if (
+        stop.some((phrase) => phraseFound(phrase.words, tokens, MAX_STOP_GAP))
+      ) {
+        continue;
+      }
       for (const phrase of include) {
         if (phraseFound(phrase.words, tokens)) found.add(phrase.source);
       }
