@@ -3,8 +3,10 @@ import { initDb, ItemRow, sequelize, TenderRow } from "./db/models";
 import { findCpvMatches } from "./filter/cpv";
 import { createMatcher } from "./filter/matcher";
 
-// re-runs the current search config over the stored tenders, writes nothing
+// re-runs the current search config over the stored tenders
+// without --apply nothing is written, only the difference is printed
 const showAll = process.argv.includes("--all");
+const apply = process.argv.includes("--apply");
 const findWords = createMatcher(config.blocks, config.exclude);
 
 // "UA-2026-10-22-012829-a" -> "012829", the short number used in conversations
@@ -25,8 +27,8 @@ for (const item of items) {
 }
 
 let same = 0;
-let changed = 0;
-let dropped = 0;
+const droppedIds: string[] = [];
+const changes: { id: string; words: string[] }[] = [];
 
 for (const row of rows) {
   const tender = {
@@ -51,8 +53,8 @@ for (const row of rows) {
   else if (before !== after) status = "CHANGED";
 
   if (status === "same") same++;
-  else if (status === "DROPPED") dropped++;
-  else changed++;
+  else if (status === "DROPPED") droppedIds.push(row.id);
+  else changes.push({ id: row.id, words });
 
   if (status !== "same" || showAll) {
     console.log(
@@ -63,7 +65,32 @@ for (const row of rows) {
 }
 
 console.log(
-  `total: ${rows.length}, same: ${same}, changed: ${changed}, dropped: ${dropped}`,
+  `total: ${rows.length}, same: ${same}, changed: ${changes.length}, dropped: ${droppedIds.length}`,
 );
+
+if (!apply) {
+  console.log("preview only, add --apply to write");
+} else {
+  // only tenders not sent yet matter: hide them from the digest, the rows stay
+  let hidden = 0;
+  if (droppedIds.length > 0) {
+    [hidden] = await TenderRow.update(
+      { notifiedAt: new Date() },
+      { where: { id: droppedIds, notifiedAt: null } },
+    );
+  }
+
+  // the first matched word decides the digest block, so keep it in line with the config
+  let regrouped = 0;
+  for (const { id, words } of changes) {
+    const [count] = await TenderRow.update(
+      { matchedWords: words },
+      { where: { id, notifiedAt: null } },
+    );
+    regrouped += count;
+  }
+
+  console.log(`applied: hidden ${hidden}, regrouped ${regrouped}`);
+}
 
 await sequelize.close();
