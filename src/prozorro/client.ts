@@ -41,6 +41,7 @@ export interface Tender {
   tenderPeriod?: { startDate?: string; endDate?: string };
   enquiryPeriod?: { startDate?: string };
   noticePublicationDate?: string;
+  dateCreated?: string;
   dateModified: string;
   items?: TenderItem[];
   awards?: TenderAward[];
@@ -115,11 +116,15 @@ export function tenderUrl(tenderID: string): string {
   return `https://prozorro.gov.ua/uk/tender/${tenderID}`;
 }
 
-/** When the tender was published: the notice date, else the start of its first period. */
+/**
+ * When the tender was published: the notice date, else the start of its first period.
+ * No-tender procedures have no periods at all, so they fall back to the creation date.
+ */
 export function publicationDate(tender: Tender): Date | null {
   const raw =
     tender.noticePublicationDate ??
     tender.enquiryPeriod?.startDate ??
-    tender.tenderPeriod?.startDate;
+    tender.tenderPeriod?.startDate ??
+    tender.dateCreated;
   return raw ? new Date(raw) : null;
 }
