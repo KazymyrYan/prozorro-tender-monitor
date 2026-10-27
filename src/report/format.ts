@@ -31,6 +31,8 @@ export interface ReportTender {
   // keywords found in the title, and indexes of the items where a keyword fired
   titleWords: string[];
   matchedItems: number[];
+  // true when every matched keyword is on the weak list
+  weak: boolean;
   items: ReportItem[];
   awards: ReportAward[];
 }
@@ -99,7 +101,8 @@ function formatWords(tender: ReportTender): string[] {
   const words = tender.matchedWords.map((word) =>
     inTitle.has(word) ? `${word} (в назві)` : word,
   );
-  return [`Слова: ${escapeHtml(words.join(", "))}`];
+  const mark = tender.weak ? " ⚪ слабке співпадіння" : "";
+  return [`Слова: ${escapeHtml(words.join(", "))}${mark}`];
 }
 
 function formatCpv(items: ReportItem[]): string[] {
@@ -189,10 +192,16 @@ export function buildMessages(
     for (const keyword of block.keywords) blockOf.set(keyword, block.name);
   }
 
-  const competitive = tenders.filter(
+  // weak matches go last, the sort keeps the original order inside each group
+  const ordered = [
+    ...tenders.filter((tender) => !tender.weak),
+    ...tenders.filter((tender) => tender.weak),
+  ];
+
+  const competitive = ordered.filter(
     (tender) => !isNoTender(tender.procurementMethodType),
   );
-  const noTender = tenders.filter((tender) =>
+  const noTender = ordered.filter((tender) =>
     isNoTender(tender.procurementMethodType),
   );
 
