@@ -1,12 +1,6 @@
 import { Op } from "sequelize";
 import { config } from "./config";
-import {
-  AwardRow,
-  initDb,
-  ItemRow,
-  sequelize,
-  TenderRow,
-} from "./db/models";
+import { AwardRow, initDb, ItemRow, sequelize, TenderRow } from "./db/models";
 import { createDetailedMatcher } from "./filter/matcher";
 import {
   buildMessages,
@@ -34,6 +28,7 @@ const kyivTime = now.toLocaleTimeString("en-GB", {
 });
 
 const findHits = createDetailedMatcher(config.blocks, config.exclude);
+const weakWords = new Set(config.weak ?? []);
 
 await initDb();
 
@@ -144,6 +139,9 @@ const tenders: ReportTender[] = rows.map((row) => {
         ),
       ),
     ],
+    weak:
+      row.matchedWords.length > 0 &&
+      row.matchedWords.every((word) => weakWords.has(word)),
     items: rowItems,
     awards: awardsByTender.get(row.id) ?? [],
   };

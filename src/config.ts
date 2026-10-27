@@ -11,6 +11,8 @@ export interface SearchConfig {
   requireCpv: boolean;
   cpv: string[];
   exclude: string[];
+  // keywords too generic to trust alone; a tender found only by them is marked as weak
+  weak?: string[];
   blocks: KeywordBlock[];
 }
 
