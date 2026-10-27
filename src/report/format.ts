@@ -28,6 +28,9 @@ export interface ReportTender {
   tenderPeriodEnd: Date | null;
   procurementMethodType: string;
   matchedWords: string[];
+  // keywords found in the title, and indexes of the items where a keyword fired
+  titleWords: string[];
+  matchedItems: number[];
   items: ReportItem[];
   awards: ReportAward[];
 }
@@ -69,11 +72,34 @@ function formatDate(date: Date | null, empty: string): string {
   });
 }
 
-function formatItem(item: ReportItem): string {
+function formatItem(item: ReportItem, hit: boolean): string {
   // numeric comes from the database as "4.000", Number() trims the zeros
   const quantity = item.quantity === null ? "" : ` — ${Number(item.quantity)}`;
   const unit = item.unit ? ` ${item.unit}` : "";
-  return `• ${escapeHtml(cut(item.description.trim(), 90))}${quantity}${unit}`;
+  const mark = hit ? "🎯" : "•";
+  return `${mark} ${escapeHtml(cut(item.description.trim(), 90))}${quantity}${unit}`;
+}
+
+// items where a keyword fired go first, so the reason is visible even in a long list
+function pickItems(tender: ReportTender): { item: ReportItem; hit: boolean }[] {
+  const hits = new Set(tender.matchedItems);
+  const all = tender.items.map((item, index) => ({
+    item,
+    hit: hits.has(index),
+  }));
+  return [...all.filter((x) => x.hit), ...all.filter((x) => !x.hit)].slice(
+    0,
+    MAX_ITEMS,
+  );
+}
+
+function formatWords(tender: ReportTender): string[] {
+  if (tender.matchedWords.length === 0) return [];
+  const inTitle = new Set(tender.titleWords);
+  const words = tender.matchedWords.map((word) =>
+    inTitle.has(word) ? `${word} (в назві)` : word,
+  );
+  return [`Слова: ${escapeHtml(words.join(", "))}`];
 }
 
 function formatCpv(items: ReportItem[]): string[] {
@@ -95,10 +121,8 @@ function cardTail(tender: ReportTender): string[] {
   const extra = tender.items.length - MAX_ITEMS;
   return [
     ...formatCpv(tender.items),
-    ...(tender.matchedWords.length > 0
-      ? [`Слова: ${escapeHtml(tender.matchedWords.join(", "))}`]
-      : []),
-    ...tender.items.slice(0, MAX_ITEMS).map(formatItem),
+    ...formatWords(tender),
+    ...pickItems(tender).map(({ item, hit }) => formatItem(item, hit)),
     ...(extra > 0 ? [`… ще позицій: ${extra}`] : []),
     `<a href="${tenderUrl(tender.tenderNumber)}">${escapeHtml(tender.tenderNumber)}</a>`,
   ];
@@ -219,7 +243,7 @@ export function buildMessages(
     length += part.length + 2;
   };
 
-    for (const section of sections) {
+  for (const section of sections) {
     const title = escapeHtml(section.name);
     let header: string | null =
       `${section.icon} <b>${title}</b> (${section.tenders.length})`;
