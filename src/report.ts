@@ -7,6 +7,7 @@ import {
   sequelize,
   TenderRow,
 } from "./db/models";
+import { createDetailedMatcher } from "./filter/matcher";
 import {
   buildMessages,
   type ReportAward,
@@ -31,6 +32,8 @@ const kyivTime = now.toLocaleTimeString("en-GB", {
   minute: "2-digit",
   hour12: false,
 });
+
+const findHits = createDetailedMatcher(config.blocks, config.exclude);
 
 await initDb();
 
@@ -64,8 +67,14 @@ const rows = await TenderRow.findAll({
 
 const ids = rows.map((row) => row.id);
 
+// stored order matters: item indexes must match the ones the matcher sees
 const items =
-  ids.length === 0 ? [] : await ItemRow.findAll({ where: { tenderId: ids } });
+  ids.length === 0
+    ? []
+    : await ItemRow.findAll({
+        where: { tenderId: ids },
+        order: [["id", "ASC"]],
+      });
 
 // only no-tender procedures have winners at this point, the rest simply get an empty list
 const awards =
@@ -101,20 +110,44 @@ for (const award of awards) {
   awardsByTender.set(award.tenderId, list);
 }
 
-const tenders: ReportTender[] = rows.map((row) => ({
-  id: row.id,
-  tenderNumber: row.tenderNumber,
-  title: row.title,
-  procuringEntity: row.procuringEntity,
-  budgetAmount: row.budgetAmount,
-  currency: row.currency,
-  tenderPeriodEnd: row.tenderPeriodEnd,
-  publishedAt: row.publishedAt,
-  procurementMethodType: row.procurementMethodType,
-  matchedWords: row.matchedWords,
-  items: itemsByTender.get(row.id) ?? [],
-  awards: awardsByTender.get(row.id) ?? [],
-}));
+const tenders: ReportTender[] = rows.map((row) => {
+  const rowItems = itemsByTender.get(row.id) ?? [];
+
+  // positions are not stored, so the hits are recomputed from the saved texts
+  const hits = findHits({
+    title: row.title,
+    items: rowItems.map((item) => ({
+      description: item.description,
+      classification: { id: item.cpvCode },
+    })),
+  });
+
+  return {
+    id: row.id,
+    tenderNumber: row.tenderNumber,
+    title: row.title,
+    procuringEntity: row.procuringEntity,
+    budgetAmount: row.budgetAmount,
+    currency: row.currency,
+    tenderPeriodEnd: row.tenderPeriodEnd,
+    publishedAt: row.publishedAt,
+    procurementMethodType: row.procurementMethodType,
+    matchedWords: row.matchedWords,
+    // unit 0 is the title, unit N is item N-1
+    titleWords: hits
+      .filter((hit) => hit.units.includes(0))
+      .map((hit) => hit.word),
+    matchedItems: [
+      ...new Set(
+        hits.flatMap((hit) =>
+          hit.units.filter((unit) => unit > 0).map((unit) => unit - 1),
+        ),
+      ),
+    ],
+    items: rowItems,
+    awards: awardsByTender.get(row.id) ?? [],
+  };
+});
 
 const messages = buildMessages(tenders, config.blocks);
 

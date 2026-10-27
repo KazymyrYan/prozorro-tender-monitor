@@ -101,15 +101,21 @@ const compile = (phrases: string[]): Phrase[] =>
     .map((source) => ({ source, words: parsePhrase(source) }))
     .filter((phrase) => phrase.words.length > 0);
 
+export interface WordHit {
+  word: string;
+  // 0 is the title, 1..n are the items in their order
+  units: number[];
+}
+
 /**
- * Builds a function that returns the keywords found in a tender.
+ * Like createMatcher, but also tells where each keyword was found.
  * The title and every item are checked on their own: a phrase never glues words
  * from two different positions, and an excluded phrase cancels only its own position.
  */
-export function createMatcher(
+export function createDetailedMatcher(
   blocks: KeywordBlock[],
   exclude: string[],
-): (tender: Searchable) => string[] {
+): (tender: Searchable) => WordHit[] {
   const include = compile(blocks.flatMap((block) => block.keywords));
   const stop = compile(exclude);
 
@@ -118,23 +124,37 @@ export function createMatcher(
       tender.title,
       ...(tender.items ?? []).map((item) => item.description),
     ];
-    const found = new Set<string>();
+    const found = new Map<string, number[]>();
 
-    for (const unit of units) {
+    units.forEach((unit, index) => {
       const tokens = normalize(unit).match(TEXT_WORD) ?? [];
       if (
         stop.some((phrase) => phraseFound(phrase.words, tokens, MAX_STOP_GAP))
       ) {
-        continue;
+        return;
       }
       for (const phrase of include) {
-        if (phraseFound(phrase.words, tokens)) found.add(phrase.source);
+        if (phraseFound(phrase.words, tokens)) {
+          found.set(phrase.source, [...(found.get(phrase.source) ?? []), index]);
+        }
       }
-    }
+    });
 
     // keep the order of the config
     return include
       .filter((phrase) => found.has(phrase.source))
-      .map((phrase) => phrase.source);
+      .map((phrase) => ({
+        word: phrase.source,
+        units: found.get(phrase.source) ?? [],
+      }));
   };
+}
+
+/** Returns only the keywords found in a tender, in the order of the config. */
+export function createMatcher(
+  blocks: KeywordBlock[],
+  exclude: string[],
+): (tender: Searchable) => string[] {
+  const detailed = createDetailedMatcher(blocks, exclude);
+  return (tender) => detailed(tender).map((hit) => hit.word);
 }
