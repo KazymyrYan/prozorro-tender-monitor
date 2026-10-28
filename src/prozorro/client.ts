@@ -37,9 +37,13 @@ export interface Tender {
     identifier?: { id?: string };
     address?: { region?: string };
   };
-  value?: { amount?: number; currency?: string };
+  value?: {
+    amount?: number;
+    currency?: string;
+    valueAddedTaxIncluded?: boolean;
+  };
   tenderPeriod?: { startDate?: string; endDate?: string };
-  enquiryPeriod?: { startDate?: string };
+  enquiryPeriod?: { startDate?: string; endDate?: string };
   noticePublicationDate?: string;
   dateCreated?: string;
   dateModified: string;
