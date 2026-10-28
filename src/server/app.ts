@@ -1,5 +1,9 @@
 import cookieParser from "cookie-parser";
-import express from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import rateLimit from "express-rate-limit";
 import {
   COOKIE_NAME,
@@ -8,6 +12,7 @@ import {
   createToken,
   requireAuth,
 } from "./auth.js";
+import { tendersRouter } from "./tenders.js";
 
 const cookieOptions = {
   httpOnly: true,
@@ -59,8 +64,17 @@ export function createApp() {
     res.json({ ok: true });
   });
 
+  app.use("/api/tenders", requireAuth, tendersRouter);
+
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "not_found" });
+  });
+
+  // keeps API errors as JSON instead of an HTML stack page
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    console.error(err);
+    res.status(500).json({ error: "server_error" });
   });
 
   return app;
