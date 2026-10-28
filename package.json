@@ -11,7 +11,8 @@
     "recheck": "tsx src/recheck.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "server": "tsx src/server/index.ts"
+    "server": "tsx src/server/index.ts",
+    "build": "npm --prefix web ci --include=dev && npm --prefix web run build"
   },
   "keywords": [],
   "author": "Yan Kazymyr",

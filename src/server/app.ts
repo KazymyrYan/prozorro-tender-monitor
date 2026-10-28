@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import cookieParser from "cookie-parser";
 import express, {
   type NextFunction,
@@ -69,6 +71,16 @@ export function createApp() {
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "not_found" });
   });
+
+  // the built React app, exists only after `npm run build`
+  const webDir = path.resolve("web/dist");
+  if (existsSync(webDir)) {
+    app.use(express.static(webDir));
+    // any other path is a client-side route
+    app.get("/{*splat}", (_req, res) => {
+      res.sendFile(path.join(webDir, "index.html"));
+    });
+  }
 
   // keeps API errors as JSON instead of an HTML stack page
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
