@@ -10,13 +10,16 @@
     "health": "tsx src/health.ts",
     "recheck": "tsx src/recheck.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "server": "tsx src/server/index.ts"
   },
   "keywords": [],
   "author": "Yan Kazymyr",
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
     "eslint": "^10.13.0",
     "tsx": "^4.23.15",
@@ -24,7 +27,10 @@
     "typescript-eslint": "^8.71.2"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
     "pg": "^8.23.1",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.8"
