@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, api } from "./api";
+import Home from "./Home";
 
 type Screen = "loading" | "login" | "app";
 
@@ -47,33 +48,6 @@ function Login({ onDone }: { onDone: () => void }) {
           Увійти
         </button>
       </form>
-    </div>
-  );
-}
-
-function Home({ onLogout }: { onLogout: () => void }) {
-  const [count, setCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    api<{ tenders: unknown[] }>("/api/tenders?period=week")
-      .then((data) => setCount(data.tenders.length))
-      .catch(() => setCount(null));
-  }, []);
-
-  async function logout() {
-    await api("/api/logout", { method: "POST" });
-    onLogout();
-  }
-
-  return (
-    <div className="home">
-      <h1>
-        <span>Прозорро</span> Монітор
-      </h1>
-      <p>Тендерів за тиждень: {count ?? "…"}</p>
-      <button className="btn" onClick={logout}>
-        Вийти
-      </button>
     </div>
   );
 }
