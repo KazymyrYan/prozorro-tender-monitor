@@ -82,6 +82,12 @@ export class TenderRow extends Model<
   declare matchedCpv: string[];
   declare notifiedAt: CreationOptional<Date | null>;
   declare firstSeenAt: CreationOptional<Date>;
+  // true for tenders added by hand from the UI
+  declare addedManually: CreationOptional<boolean>;
+  // from value.valueAddedTaxIncluded, null when the API doesn't say
+  declare budgetVatIncluded: boolean | null;
+  // end of the question period, only competitive tenders have it
+  declare enquiryEnd: Date | null;
 }
 
 TenderRow.init(
@@ -108,6 +114,13 @@ TenderRow.init(
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
+    addedManually: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    budgetVatIncluded: { type: DataTypes.BOOLEAN, allowNull: true },
+    enquiryEnd: { type: DataTypes.DATE, allowNull: true },
   },
   { sequelize, tableName: "tenders", timestamps: false },
 );
@@ -171,6 +184,78 @@ AwardRow.init(
 
 TenderRow.hasMany(AwardRow, { foreignKey: "tenderId", onDelete: "CASCADE" });
 AwardRow.belongsTo(TenderRow, { foreignKey: "tenderId" });
+
+// our own marks on a tender, one row per tender; status is plain text
+// (interesting, preparing, submitted, won, lost, archive), empty means none
+export class TenderMark extends Model<
+  InferAttributes<TenderMark>,
+  InferCreationAttributes<TenderMark>
+> {
+  declare tenderId: string;
+  declare status: CreationOptional<string | null>;
+  declare manager: CreationOptional<string | null>;
+  declare company: CreationOptional<string | null>;
+  declare note: CreationOptional<string | null>;
+  declare itemsNote: CreationOptional<string | null>;
+  declare paymentTerms: CreationOptional<string | null>;
+  declare bankGuaranteeNeeded: CreationOptional<boolean>;
+  // sum and percent are free text, the user writes them as he likes
+  declare bankGuaranteeSum: CreationOptional<string | null>;
+  declare contractSecurityNeeded: CreationOptional<boolean>;
+  declare contractSecurityPercent: CreationOptional<string | null>;
+  declare updatedAt: CreationOptional<Date>;
+}
+
+TenderMark.init(
+  {
+    tenderId: { type: DataTypes.STRING, primaryKey: true },
+    status: { type: DataTypes.STRING, allowNull: true },
+    manager: { type: DataTypes.STRING, allowNull: true },
+    company: { type: DataTypes.STRING, allowNull: true },
+    note: { type: DataTypes.TEXT, allowNull: true },
+    itemsNote: { type: DataTypes.TEXT, allowNull: true },
+    paymentTerms: { type: DataTypes.TEXT, allowNull: true },
+    bankGuaranteeNeeded: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    bankGuaranteeSum: { type: DataTypes.STRING, allowNull: true },
+    contractSecurityNeeded: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    contractSecurityPercent: { type: DataTypes.STRING, allowNull: true },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  // Sequelize keeps updated_at current on every save
+  { sequelize, tableName: "tender_marks", createdAt: false, updatedAt: true },
+);
+
+TenderRow.hasOne(TenderMark, { foreignKey: "tenderId", onDelete: "CASCADE" });
+TenderMark.belongsTo(TenderRow, { foreignKey: "tenderId" });
+
+// settings edited from the UI (managers, channel switches), values are JSON text
+export class AppSetting extends Model<
+  InferAttributes<AppSetting>,
+  InferCreationAttributes<AppSetting>
+> {
+  declare key: string;
+  declare value: string;
+}
+
+AppSetting.init(
+  {
+    key: { type: DataTypes.STRING, primaryKey: true },
+    value: { type: DataTypes.TEXT, allowNull: false },
+  },
+  { sequelize, tableName: "app_settings", timestamps: false },
+);
 
 /** Creates the tables if they don't exist yet. */
 export async function initDb(): Promise<void> {

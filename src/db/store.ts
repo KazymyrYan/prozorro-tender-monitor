@@ -69,6 +69,10 @@ export async function saveTenders(entries: TenderEntry[]): Promise<number> {
             ? String(tender.value.amount)
             : null,
         currency: tender.value?.currency ?? null,
+        budgetVatIncluded: tender.value?.valueAddedTaxIncluded ?? null,
+        enquiryEnd: tender.enquiryPeriod?.endDate
+          ? new Date(tender.enquiryPeriod.endDate)
+          : null,
         tenderPeriodEnd: tender.tenderPeriod?.endDate
           ? new Date(tender.tenderPeriod.endDate)
           : null,
