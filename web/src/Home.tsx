@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, api } from "./api";
 import { formatMoney, kyivToday, plural } from "./format";
 import { Panel } from "./Panel";
+import { SettingsModal } from "./SettingsModal";
 import { TenderRow } from "./TenderRow";
 import {
   STATUSES,
@@ -37,6 +38,7 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
     telegramEnabled: true,
   });
   const [openId, setOpenId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [manager, setManager] = useState("");
@@ -197,6 +199,19 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
     else showToast("Щоб зняти ⭐, змініть статус");
   }
 
+  async function saveSettings(patch: Partial<Settings>): Promise<boolean> {
+    try {
+      setSettings(
+        await api<Settings>("/api/settings", { method: "PUT", body: patch }),
+      );
+      return true;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) onLogout();
+      else showToast("Не вдалося зберегти");
+      return false;
+    }
+  }
+
   async function logout() {
     await api("/api/logout", { method: "POST" });
     onLogout();
@@ -209,6 +224,13 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
           <span>Прозорро</span> Монітор
         </h1>
         <div className="header-actions">
+          <button
+            className="btn btn-sm"
+            onClick={() => setSettingsOpen(true)}
+            title="Налаштування"
+          >
+            ⚙
+          </button>
           <button className="btn btn-sm" onClick={logout}>
             Вийти
           </button>
@@ -381,6 +403,14 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
           }}
           onCustomer={setCustomer}
           onCopy={() => showToast("Номер скопійовано")}
+        />
+      )}
+
+      {settingsOpen && (
+        <SettingsModal
+          settings={settings}
+          onSave={saveSettings}
+          onClose={() => setSettingsOpen(false)}
         />
       )}
 
