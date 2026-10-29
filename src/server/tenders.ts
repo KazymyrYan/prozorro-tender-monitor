@@ -181,7 +181,7 @@ function serialize(
   return { current, tender };
 }
 
-async function buildTenders(rows: TenderRow[]) {
+export async function buildTenders(rows: TenderRow[]) {
   if (rows.length === 0) return [];
   const ids = rows.map((row) => row.id);
   const [items, awards, marks] = await Promise.all([

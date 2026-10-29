@@ -16,6 +16,7 @@ import {
 } from "./auth.js";
 import { tendersRouter } from "./tenders.js";
 import { settingsRouter } from "./settings.js";
+import { manualRouter } from "./manual.js";
 
 const cookieOptions = {
   httpOnly: true,
@@ -67,6 +68,7 @@ export function createApp() {
     res.json({ ok: true });
   });
 
+  app.use("/api/tenders", requireAuth, manualRouter);
   app.use("/api/tenders", requireAuth, tendersRouter);
 
   app.use("/api/settings", requireAuth, settingsRouter);
