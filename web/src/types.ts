@@ -87,3 +87,10 @@ export interface TendersResponse {
   today: string;
   tenders: Tender[];
 }
+
+export const COMPANIES = ["УПИ", "УИ", "СХППП"];
+
+export interface Settings {
+  managers: string[];
+  telegramEnabled: boolean;
+}

@@ -4,6 +4,7 @@ import { STATUSES, STATUS_LABELS, type Status, type Tender } from "./types";
 interface Props {
   tender: Tender;
   today: string;
+  onOpen: () => void;
   onStar: () => void;
   onStatus: (status: Status | null) => void;
   onCustomer: () => void;
@@ -30,6 +31,7 @@ function Deadline({ iso, today }: { iso: string | null; today: string }) {
 export function TenderRow({
   tender: t,
   today,
+  onOpen,
   onStar,
   onStatus,
   onCustomer,
@@ -39,20 +41,28 @@ export function TenderRow({
   const starred = status !== null && status !== "archive";
   const hasPositionHit = t.words.some((word) => word.place === "pos");
 
-  function copyNumber() {
-    navigator.clipboard.writeText(t.number).then(onCopy);
-  }
-
   return (
-    <div className="tender-row">
-      <div className={`star ${starred ? "active" : ""}`} onClick={onStar}>
+    <div className="tender-row" onClick={onOpen}>
+      <div
+        className={`star ${starred ? "active" : ""}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onStar();
+        }}
+      >
         {starred ? "★" : "☆"}
       </div>
 
       <div className="tender-main">
         <div className="tender-title">{t.title}</div>
         <div className="tender-meta">
-          <span className="customer-link" onClick={onCustomer}>
+          <span
+            className="customer-link"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCustomer();
+            }}
+          >
             {t.customer}
           </span>
           {t.region && <span className="sep">{t.region}</span>}
@@ -80,7 +90,14 @@ export function TenderRow({
           ))}
           {hasPositionHit && " 🎯"}
           {t.weak && <span title="Слабке співпадіння"> ⚪</span>}
-          <button className="copy-btn" onClick={copyNumber} title="Копіювати номер">
+          <button
+            className="copy-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(t.number).then(onCopy);
+            }}
+            title="Копіювати номер"
+          >
             № {t.number}
           </button>
         </div>
@@ -88,6 +105,7 @@ export function TenderRow({
           <select
             className="status-quick"
             value={status ?? ""}
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => onStatus((e.target.value || null) as Status | null)}
           >
             <option value="">—</option>

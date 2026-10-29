@@ -33,3 +33,11 @@ export function plural(n: number, one: string, few: string, many: string) {
   if (last === 1) return one;
   return many;
 }
+
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("uk-UA", {
+    timeZone: "Europe/Kyiv",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
