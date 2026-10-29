@@ -94,3 +94,25 @@ export interface Settings {
   managers: string[];
   telegramEnabled: boolean;
 }
+
+export interface CheckPreview {
+  number: string;
+  title: string;
+  customer: string;
+  region: string | null;
+  procurementMethodType: string;
+  status: string;
+  budget: string | null;
+  currency: string | null;
+  deadline: string | null;
+}
+
+export type CheckResult =
+  | { exists: true; tender: Tender }
+  | {
+      exists: false;
+      preview: CheckPreview;
+      words: Word[];
+      cpv: string[];
+      matched: boolean;
+    };

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, api } from "./api";
 import { formatMoney, kyivToday, plural } from "./format";
 import { Panel } from "./Panel";
+import { AddTenderModal } from "./AddTenderModal";
 import { SettingsModal } from "./SettingsModal";
 import { TenderRow } from "./TenderRow";
 import {
@@ -39,6 +40,7 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
   });
   const [openId, setOpenId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [manager, setManager] = useState("");
@@ -225,6 +227,12 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
         </h1>
         <div className="header-actions">
           <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setAddOpen(true)}
+          >
+            + Додати тендер
+          </button>
+          <button
             className="btn btn-sm"
             onClick={() => setSettingsOpen(true)}
             title="Налаштування"
@@ -403,6 +411,18 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
           }}
           onCustomer={setCustomer}
           onCopy={() => showToast("Номер скопійовано")}
+        />
+      )}
+
+      {addOpen && (
+        <AddTenderModal
+          onClose={() => setAddOpen(false)}
+          onUnauthorized={onLogout}
+          onAdded={() => {
+            setAddOpen(false);
+            setReload((n) => n + 1);
+            showToast("Тендер додано");
+          }}
         />
       )}
 

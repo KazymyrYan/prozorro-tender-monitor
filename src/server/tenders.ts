@@ -296,6 +296,7 @@ tendersRouter.get("/", async (req, res) => {
       [Op.or]: [
         { publishedAt: { [Op.gte]: since } },
         { publishedAt: null },
+        { addedManually: true },
         { id: marked.map((mark) => mark.tenderId) },
       ],
     },
