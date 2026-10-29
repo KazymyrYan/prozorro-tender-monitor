@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, api } from "./api";
 import { formatMoney, kyivToday, plural } from "./format";
+import { Panel } from "./Panel";
 import { TenderRow } from "./TenderRow";
 import {
   STATUSES,
   STATUS_LABELS,
   type Mark,
+  type Settings,
   type Status,
   type Tender,
   type TendersResponse,
@@ -30,6 +32,11 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
   const [data, setData] = useState<TendersResponse | null>(null);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
+  const [settings, setSettings] = useState<Settings>({
+    managers: [],
+    telegramEnabled: true,
+  });
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [manager, setManager] = useState("");
@@ -67,8 +74,15 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, date, reload]);
 
+  useEffect(() => {
+    api<Settings>("/api/settings")
+      .then(setSettings)
+      .catch(() => undefined);
+  }, []);
+
   const tenders = useMemo(() => data?.tenders ?? [], [data]);
   const today = data?.today ?? kyivToday();
+  const openTender = openId ? tenders.find((t) => t.id === openId) : undefined;
 
   const counts = useMemo(() => {
     const result: Record<StatusFilter, number> = {
@@ -95,15 +109,13 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
     () => [...new Set(tenders.flatMap((t) => t.blocks))].sort(),
     [tenders],
   );
-  const managerOptions = useMemo(
-    () =>
-      [
-        ...new Set(
-          tenders.map((t) => t.mark?.manager).filter((m): m is string => !!m),
-        ),
-      ].sort(),
-    [tenders],
-  );
+  // managers from settings first, then anyone who is still on a tender
+  const managerOptions = useMemo(() => {
+    const extra = tenders
+      .map((t) => t.mark?.manager)
+      .filter((m): m is string => !!m && !settings.managers.includes(m));
+    return [...settings.managers, ...new Set(extra)];
+  }, [tenders, settings.managers]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -151,7 +163,11 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
   // display only, so float is fine here
   const totalBudget = filtered.reduce((sum, t) => sum + Number(t.budget ?? 0), 0);
 
-  async function patchMark(id: string, patch: Record<string, unknown>) {
+  /** Saves marks and updates the row; true when the server accepted it. */
+  async function patchMark(
+    id: string,
+    patch: Record<string, unknown>,
+  ): Promise<boolean> {
     try {
       const { mark } = await api<{ mark: Mark }>(`/api/tenders/${id}/mark`, {
         method: "PATCH",
@@ -164,9 +180,11 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
             tenders: prev.tenders.map((t) => (t.id === id ? { ...t, mark } : t)),
           },
       );
+      return true;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) onLogout();
       else showToast("Не вдалося зберегти");
+      return false;
     }
   }
 
@@ -339,6 +357,7 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
               key={t.id}
               tender={t}
               today={today}
+              onOpen={() => setOpenId(t.id)}
               onStar={() => toggleStar(t)}
               onStatus={(status) => void patchMark(t.id, { status })}
               onCustomer={() => setCustomer(t.customer)}
@@ -347,6 +366,23 @@ export default function Home({ onLogout }: { onLogout: () => void }) {
           ))}
         </div>
       </div>
+
+      {openTender && (
+        <Panel
+          key={openTender.id}
+          tender={openTender}
+          managers={settings.managers}
+          onClose={() => setOpenId(null)}
+          onSave={async (patch) => {
+            if (await patchMark(openTender.id, patch)) {
+              setOpenId(null);
+              showToast("Збережено");
+            }
+          }}
+          onCustomer={setCustomer}
+          onCopy={() => showToast("Номер скопійовано")}
+        />
+      )}
 
       <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
     </>
