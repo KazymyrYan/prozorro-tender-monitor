@@ -15,6 +15,7 @@ import {
   requireAuth,
 } from "./auth.js";
 import { tendersRouter } from "./tenders.js";
+import { settingsRouter } from "./settings.js";
 
 const cookieOptions = {
   httpOnly: true,
@@ -67,6 +68,8 @@ export function createApp() {
   });
 
   app.use("/api/tenders", requireAuth, tendersRouter);
+
+  app.use("/api/settings", requireAuth, settingsRouter);
 
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "not_found" });

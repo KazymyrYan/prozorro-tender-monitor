@@ -11,6 +11,7 @@ import {
 import { sendMessage } from "./telegram/send";
 import { sleep } from "./utils/sleep";
 import { getState, setState } from "./db/store";
+import { getSettings } from "./db/settings";
 
 // --dry prints the messages and changes nothing
 const dryRun = process.argv.includes("--dry");
@@ -31,6 +32,13 @@ const findHits = createDetailedMatcher(config.blocks, config.exclude);
 const weakWords = new Set(config.weak ?? []);
 
 await initDb();
+
+// the digest can be switched off in the UI settings; --dry still works
+if (!dryRun && !(await getSettings()).telegramEnabled) {
+  console.log("telegram digest is off in settings, skipping");
+  await sequelize.close();
+  process.exit(0);
+}
 
 if (
   scheduled &&
